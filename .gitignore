@@ -165,3 +165,5 @@ build
 
 # Data files
 *.png
+/data
+/output
