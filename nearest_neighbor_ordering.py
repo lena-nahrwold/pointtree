@@ -1,3 +1,17 @@
+from scipy.spatial import cKDTree
+import numpy as np
+from pointtorch import read
+
+segmentation_tool = "lewos"
+
+# Load point cloud (supports .txt, .csv, .las, .laz, .ply)
+target_path = "./data/manual_segmented.las"
+target = read(target_path)
+#print(target.columns)
+
+prediction_path = f"./data/{segmentation_tool}_segmented.las"
+prediction = read(prediction_path)
+
 pred_xyz    = prediction[['x','y','z']].values
 gt_xyz      = target[['x','y','z']].values
 pred_labels = prediction['classification'].to_numpy()
@@ -6,7 +20,7 @@ gt_labels   = target['classification'].to_numpy()
 # Build KDTree on predicted points
 tree = cKDTree(pred_xyz)
 
-# Query nearest neighbor for each GT point
+# Query nearest neighbor for each target point
 dists, idxs = tree.query(gt_xyz, k=1)
 
 # Check distance distribution
