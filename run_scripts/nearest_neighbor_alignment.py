@@ -8,10 +8,10 @@ from textwrap import indent
 segmentation_tool = "point2tree"
 
 # Load clouds
-target_path = "./data/manual_shift_segmented.las"
+target_path = "./data/manual_shift_segmented_p2t_aligned.las"
 target = read(target_path)
 
-prediction_path = f"./data/old/{segmentation_tool}_segmented.las"
+prediction_path = f"./data/old/{segmentation_tool}_segmented_aligned.las"
 prediction = read(prediction_path)
 
 # Convert to numpy arrays

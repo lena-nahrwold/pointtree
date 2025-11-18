@@ -28,6 +28,7 @@ from pointtorch import read
 from scipy.spatial import cKDTree
 import numpy as np
 from pointtree.evaluation import semantic_segmentation_metrics
+from evaluation_helper import create_confusion_matrix
 import json
 from textwrap import indent
 
@@ -49,14 +50,14 @@ target.sort_values(by=['x','y','z'], ascending=True, inplace=True, ignore_index=
 prediction.sort_values(by=['x','y','z'], ascending=True, inplace=True, ignore_index=True)
 
 class_map = {
-    "wood":         64,
-    "leaf tree":    65,
-    "human-made":   66,
-    "ground":       67,
+    "crown":        65,
+    "shrub":        71,
     "grasses":      68,
+    "wood":         64,
+    "ground":       67,
+    "human-made":   66,
     "animal/human": 69,
-    "uncertain":    70,
-    "leaf shrub":   71
+    "uncertain":    70
 }
 
 aggregate_classes = {
@@ -64,23 +65,43 @@ aggregate_classes = {
     "other":   [64, 66, 67, 69, 70]
 }
 
-evaluation = semantic_segmentation_metrics(
-    target['classification'],
-    prediction['classification'],
+#evaluation = semantic_segmentation_metrics(
+#    target['classification'],
+#    prediction['classification'],
+#    class_map,
+#    aggregate_classes=aggregate_classes
+#)
+#
+## Replace NaN with 0 to avoid JSON serialization issues
+#evaluation_clean = {k: float(np.nan_to_num(v)) for k, v in evaluation.items()}
+#
+#output_path = f"./output/{segmentation_tool}_evaluation_results.txt"
+#with open(output_path, "w") as f:
+#    f.write(f"{segmentation_tool} Semantic Segmentation Evaluation Results\n")
+#    f.write("=" * 50 + "\n\n")
+#
+#    # Print each metric with alignment
+#    for key, val in evaluation_clean.items():
+#        f.write(f"{key:<30}: {val:.4f}\n")
+#
+#print(f"Results saved to {output_path}")
+
+aggregate_classes = {
+    "vegetation":  [65, 68, 71],
+    "wood":   [64],
+    "ground": [67],
+    "human-made": [66],
+    "other": [70, 69]
+}
+
+png_path = f"./output/{segmentation_tool}_confusion_matrix.png"
+matrix, labels = create_confusion_matrix(
+    target["classification"],
+    prediction["classification"],
     class_map,
-    aggregate_classes=aggregate_classes
+    None, #aggregate_classes,
+    png_path
 )
 
-# Replace NaN with 0 to avoid JSON serialization issues
-evaluation_clean = {k: float(np.nan_to_num(v)) for k, v in evaluation.items()}
-
-output_path = f"./output/{segmentation_tool}_evaluation_results.txt"
-with open(output_path, "w") as f:
-    f.write(f"{segmentation_tool} Semantic Segmentation Evaluation Results\n")
-    f.write("=" * 50 + "\n\n")
-
-    # Print each metric with alignment
-    for key, val in evaluation_clean.items():
-        f.write(f"{key:<30}: {val:.4f}\n")
-
-print(f"Results saved to {output_path}")
+print(matrix)
+print(labels)
