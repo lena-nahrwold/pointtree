@@ -32,16 +32,16 @@ from evaluation import create_confusion_matrix, nearest_neighbor_alignment
 import json
 from textwrap import indent
 
-segmentation_tools = ["forainet", "forainet_shift", "fsct", "lewos", "point2tree", "pointstowood"]
+segmentation_tools = ["ForAINet", "FSCT", "LeWoS", "Point2Tree", "PointsToWood"]
 
 for segmentation_tool in segmentation_tools:
     print(f"Reading data for {segmentation_tool}...")
     # Load point cloud (supports .txt, .csv, .las, .laz, .ply)
-    target_path = f"./data/{segmentation_tool}/manual_segmented.las"
+    target_path = f"./data/{segmentation_tool.lower()}/manual_segmented.las"
     target = read(target_path)
     #print(target.columns)
 
-    prediction_path = f"./data/{segmentation_tool}/{segmentation_tool}_segmented.las"
+    prediction_path = f"./data/{segmentation_tool.lower()}/{segmentation_tool.lower()}_segmented.las"
     prediction = read(prediction_path)
     #print(prediction.columns)
 
@@ -81,7 +81,7 @@ for segmentation_tool in segmentation_tools:
     # Replace NaN with 0 to avoid JSON serialization issues
     evaluation_clean = {k: float(np.nan_to_num(v)) for k, v in evaluation.items()}
 
-    output_path = f"./output/{segmentation_tool}_evaluation_results.txt"
+    output_path = f"./output/{segmentation_tool.lower()}_evaluation_results.txt"
     with open(output_path, "w") as f:
         f.write(f"{segmentation_tool} Semantic Segmentation Evaluation Results\n")
         f.write("=" * 50 + "\n\n")
@@ -96,18 +96,19 @@ for segmentation_tool in segmentation_tools:
 
     aggregate_classes = {
         "vegetation":  [65, 68, 71],
-        #"wood"      :  [64],
-        #"ground"    :  [67],
-        "other":   [64, 66, 67, 70, 69]
+        "wood"      :  [64],
+        "ground"    :  [67],
+        "other":   [66, 70, 69]
     }
 
-    png_path = f"./output/{segmentation_tool}_confusion_matrix"
+    png_path = f"./output/{segmentation_tool.lower()}_confusion_matrix"
     create_confusion_matrix(
         target["classification"],
         prediction["classification"],
         class_map,
         aggregate_classes,
-        png_path
+        png_path,
+        title=segmentation_tool
     )
 
     print("Saved confusion matrices.\n")

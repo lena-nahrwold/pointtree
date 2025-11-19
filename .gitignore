@@ -167,3 +167,5 @@ build
 *.png
 /data
 /output
+
+/scripts

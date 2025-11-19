@@ -15,6 +15,7 @@ def create_confusion_matrix(
     class_map: Dict[str, int],
     aggregate_classes: Optional[Dict[str, List[int]]] = None,
     png_path: str = "confusion_matrix.png",
+    title: str = "Segmentation tool"
 ):
     """
     Calculates confusion matrix and optionally aggregates classes.
@@ -39,8 +40,9 @@ def create_confusion_matrix(
         fig, ax = plt.subplots(figsize=(10, 8))
         im = ax.imshow(matrix_to_plot, interpolation="nearest")
 
-        ax.set_xlabel("Predicted label")
-        ax.set_ylabel("True label")
+        ax.set_xlabel("Predicted label", fontsize=12)
+        ax.set_ylabel("True label", fontsize=12)
+        ax.set_title(title, fontsize=14)
 
         ax.set_xticks(np.arange(len(class_labels)))
         ax.set_yticks(np.arange(len(class_labels)))
@@ -76,10 +78,6 @@ def create_confusion_matrix(
     save_confusion_matrix(cm, f"{png_path}.png")
 
     if aggregate_classes:
-        #aggregated_class_ids = []
-        #for class_ids in aggregate_classes.values():
-        #    aggregated_class_ids.extend(class_ids)
-
         # Create a mapping id → aggregated_name or original_name
         reverse_map = {v: k for k, v in class_map.items()}
 
