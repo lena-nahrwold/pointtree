@@ -15,7 +15,7 @@ def create_confusion_matrix(
     class_map: Dict[str, int],
     aggregate_classes: Optional[Dict[str, List[int]]] = None,
     png_path: str = "confusion_matrix.png",
-) -> Tuple[np.ndarray, List[str]]:
+):
     """
     Calculates confusion matrix and optionally aggregates classes.
     Also generates a heatmap PNG.
@@ -27,14 +27,53 @@ def create_confusion_matrix(
         aggregate_classes: Optional dictionary that maps new class names to 
                            lists of numeric class IDs to merge.
         png_path: Path where the confusion matrix heatmap PNG will be saved.
-
-    Returns:
-        A tuple containing:
-            - confusion_matrix (np.ndarray)
-            - class_labels (List[str]) corresponding to matrix rows/cols
     """
     if len(target) != len(prediction):
         raise ValueError("Target and prediction must have the same shape.")
+    
+    def save_confusion_matrix(cm, png_path):
+        # Normalize matrix (row-wise)
+        cm_normalized = cm.div(cm.sum(axis=1).replace(0, np.nan), axis=0)
+        matrix_to_plot = cm_normalized.values
+
+        fig, ax = plt.subplots(figsize=(10, 8))
+        im = ax.imshow(matrix_to_plot, interpolation="nearest")
+
+        ax.set_xlabel("Predicted label")
+        ax.set_ylabel("True label")
+
+        ax.set_xticks(np.arange(len(class_labels)))
+        ax.set_yticks(np.arange(len(class_labels)))
+        ax.set_xticklabels(class_labels, rotation=45, ha="right")
+        ax.set_yticklabels(class_labels)
+
+        # Draw values with adaptive text color
+        for i in range(len(class_labels)):
+            for j in range(len(class_labels)):
+                value = matrix_to_plot[i, j]
+                rgba = im.cmap(im.norm(value))
+                lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
+                text_color = "black" if lum > 0.5 else "white"
+
+                ax.text(
+                    j, i, f"{value:.2f}",
+                    ha="center", va="center",
+                    color=text_color
+                )
+
+        fig.colorbar(im, ax=ax)
+        plt.tight_layout()
+        plt.savefig(png_path, dpi=300)
+        plt.close()
+    
+    ids = list(class_map.values())
+    cm = confusion_matrix(target, prediction, labels=ids)
+    class_labels = list(class_map.keys())
+
+    # Convert to DataFrame for easier plotting
+    cm = pd.DataFrame(cm, index=class_labels, columns=class_labels)
+
+    save_confusion_matrix(cm, f"{png_path}.png")
 
     if aggregate_classes:
         #aggregated_class_ids = []
@@ -73,48 +112,7 @@ def create_confusion_matrix(
             dropna=False
         ).reindex(index=class_labels, columns=class_labels, fill_value=0)
 
-    else:
-        ids = list(class_map.values())
+        save_confusion_matrix(cm, f"{png_path}_aggregated.png")
 
-        cm = confusion_matrix(target, prediction, labels=ids)
-        class_labels = list(class_map.keys())
+    return 
 
-        # Convert to DataFrame for easier plotting
-        cm = pd.DataFrame(cm, index=class_labels, columns=class_labels)
-
-    # Normalize matrix (row-wise)
-    cm_normalized = cm.div(cm.sum(axis=1).replace(0, np.nan), axis=0)
-    matrix_to_plot = cm_normalized.values
-
-    fig, ax = plt.subplots(figsize=(10, 8))
-    im = ax.imshow(matrix_to_plot, interpolation="nearest")
-
-    ax.set_xlabel("Predicted label")
-    ax.set_ylabel("True label")
-
-    ax.set_xticks(np.arange(len(class_labels)))
-    ax.set_yticks(np.arange(len(class_labels)))
-    ax.set_xticklabels(class_labels, rotation=45, ha="right")
-    ax.set_yticklabels(class_labels)
-
-    # Draw values with adaptive text color
-    for i in range(len(class_labels)):
-        for j in range(len(class_labels)):
-            value = matrix_to_plot[i, j]
-            rgba = im.cmap(im.norm(value))
-            lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
-            text_color = "black" if lum > 0.5 else "white"
-
-            ax.text(
-                j, i, f"{value:.2f}",
-                ha="center", va="center",
-                color=text_color
-            )
-
-    fig.colorbar(im, ax=ax)
-    plt.tight_layout()
-    plt.savefig(png_path, dpi=300)
-    plt.close()
-
-
-    return cm.values, class_labels
