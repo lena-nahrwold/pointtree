@@ -27,81 +27,82 @@ pointtree.evaluation.semantic_segmentation_metrics(
 from pointtorch import read
 from scipy.spatial import cKDTree
 import numpy as np
-from pointtree.evaluation import semantic_segmentation_metrics
-from evaluation_helper import create_confusion_matrix
+from evaluation import semantic_segmentation_metrics
+from evaluation import create_confusion_matrix, nearest_neighbor_alignment
 import json
 from textwrap import indent
 
-segmentation_tool = "fsct_shift"
+segmentation_tools = ["forainet", "forainet_shift", "fsct", "lewos", "point2tree", "pointstowood"]
 
-# Load point cloud (supports .txt, .csv, .las, .laz, .ply)
-target_path = "./data/manual_segmented.las"
-target = read(target_path)
-#print(target.columns)
+for segmentation_tool in segmentation_tools:
+    print(f"Reading data for {segmentation_tool}...")
+    # Load point cloud (supports .txt, .csv, .las, .laz, .ply)
+    target_path = f"./data/{segmentation_tool}/manual_segmented.las"
+    target = read(target_path)
+    #print(target.columns)
 
-prediction_path = f"./data/{segmentation_tool}_segmented.las"
-prediction = read(prediction_path)
-#print(prediction.columns)
+    prediction_path = f"./data/{segmentation_tool}/{segmentation_tool}_segmented.las"
+    prediction = read(prediction_path)
+    #print(prediction.columns)
 
-#print(target.shape)
-#print(prediction.shape)
+    print(target.shape)
+    print(prediction.shape)
 
-target.sort_values(by=['x','y','z'], ascending=True, inplace=True, ignore_index=True)
-prediction.sort_values(by=['x','y','z'], ascending=True, inplace=True, ignore_index=True)
+    if target['classification'].shape != prediction['classification'].shape:
+        print("Aligning prediction point cloud.")
+        prediction = nearest_neighbor_alignment(target, prediction)
 
-class_map = {
-    "crown":        65,
-    "shrub":        71,
-    "grasses":      68,
-    "wood":         64,
-    "ground":       67,
-    "human-made":   66,
-    "animal/human": 69,
-    "uncertain":    70
-}
+    target.sort_values(by=['x','y','z'], ascending=True, inplace=True, ignore_index=True)
+    prediction.sort_values(by=['x','y','z'], ascending=True, inplace=True, ignore_index=True)
 
-aggregate_classes = {
-    "leaves":  [65, 68, 71],
-    "other":   [64, 66, 67, 69, 70]
-}
+    class_map = {
+        "crown":        65,
+        "shrub":        71,
+        "grasses":      68,
+        "wood":         64,
+        "ground":       67,
+        "human-made":   66,
+        "animal/human": 69,
+        "uncertain":    70
+    }
 
-#evaluation = semantic_segmentation_metrics(
-#    target['classification'],
-#    prediction['classification'],
-#    class_map,
-#    aggregate_classes=aggregate_classes
-#)
-#
-## Replace NaN with 0 to avoid JSON serialization issues
-#evaluation_clean = {k: float(np.nan_to_num(v)) for k, v in evaluation.items()}
-#
-#output_path = f"./output/{segmentation_tool}_evaluation_results.txt"
-#with open(output_path, "w") as f:
-#    f.write(f"{segmentation_tool} Semantic Segmentation Evaluation Results\n")
-#    f.write("=" * 50 + "\n\n")
-#
-#    # Print each metric with alignment
-#    for key, val in evaluation_clean.items():
-#        f.write(f"{key:<30}: {val:.4f}\n")
-#
-#print(f"Results saved to {output_path}")
+    aggregate_classes = {
+        "vegetation":  [65, 68, 71],
+        "wood":   [64],
+        "ground": [67],
+        "other": [66, 70, 69]
+    }
 
-aggregate_classes = {
-    "vegetation":  [65, 68, 71],
-    "wood":   [64],
-    "ground": [67],
-    "human-made": [66],
-    "other": [70, 69]
-}
+    evaluation = semantic_segmentation_metrics(
+        target['classification'],
+        prediction['classification'],
+        class_map,
+        aggregate_classes=aggregate_classes
+    )
 
-png_path = f"./output/{segmentation_tool}_confusion_matrix.png"
-matrix, labels = create_confusion_matrix(
-    target["classification"],
-    prediction["classification"],
-    class_map,
-    None, #aggregate_classes,
-    png_path
-)
+    # Replace NaN with 0 to avoid JSON serialization issues
+    evaluation_clean = {k: float(np.nan_to_num(v)) for k, v in evaluation.items()}
 
-print(matrix)
-print(labels)
+    output_path = f"./output/{segmentation_tool}_evaluation_results.txt"
+    with open(output_path, "w") as f:
+        f.write(f"{segmentation_tool} Semantic Segmentation Evaluation Results\n")
+        f.write("=" * 50 + "\n\n")
+
+        # Print each metric with alignment
+        for key, val in evaluation_clean.items():
+            f.write(f"{key:<30}: {val:.4f}\n")
+
+    print(f"Evaluation results saved to {output_path}")
+
+    print(f"Create confusion matrices for {segmentation_tool}.")
+
+    png_path = f"./output/{segmentation_tool}_confusion_matrix"
+    create_confusion_matrix(
+        target["classification"],
+        prediction["classification"],
+        class_map,
+        aggregate_classes,
+        png_path
+    )
+
+    print("Saved confusion matrices.\n")
