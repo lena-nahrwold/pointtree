@@ -49,10 +49,21 @@ def semantic_segmentation_metrics(  # pylint: disable=too-many-locals, too-many-
     recalls = []
     recalls_aggregated = []
 
+    f1_scores = []
+    f1_scores_aggregated = []
+
     for class_name, class_id in class_map.items():
         tp = np.logical_and(target == class_id, prediction == class_id).sum()
         fp = np.logical_and(target != class_id, prediction == class_id).sum()
         fn = np.logical_and(target == class_id, prediction != class_id).sum()
+
+        num_points = (target == class_id).sum()
+        metrics[f"#{class_name}PointsTarget"] = int(num_points)
+        metrics[f"%{class_name}PointsTarget"] = 100 * int(num_points) / target.size
+
+        num_points = (prediction == class_id).sum()
+        metrics[f"#{class_name}PointsPrediction"] = int(num_points)
+        metrics[f"%{class_name}PointsPrediction"] = 100 * int(num_points) / prediction.size
 
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         metrics[f"{class_name}Precision"] = precision
@@ -62,6 +73,10 @@ def semantic_segmentation_metrics(  # pylint: disable=too-many-locals, too-many-
         metrics[f"{class_name}Recall"] = recall
         recalls.append(recall)
 
+        f1_score = 2 * (precision * recall) / (precision + recall) if (precision * recall) > 0 else 0.0
+        metrics[f"{class_name}F1"] = f1_score
+        f1_scores.append(f1_score)
+
         iou = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else 0.0
         metrics[f"{class_name}IoU"] = iou
         ious.append(iou)
@@ -70,9 +85,11 @@ def semantic_segmentation_metrics(  # pylint: disable=too-many-locals, too-many-
             ious_aggregated.append(iou)
             precisions_aggregated.append(precision)
             recalls_aggregated.append(recall)
+            f1_scores_aggregated.append(f1_score)
 
     metrics["MeanPrecision"] = np.array(precisions).mean()
     metrics["MeanRecall"] = np.array(recalls).mean()
+    metrics["MeanF1"] = np.array(f1_scores).mean()
     metrics["MeanIoU"] = np.array(ious).mean()
 
     if aggregate_classes is not None:
@@ -82,6 +99,19 @@ def semantic_segmentation_metrics(  # pylint: disable=too-many-locals, too-many-
             for class_id in aggregate_class_ids:
                 target_mask = np.logical_or(target_mask, target == class_id)
                 prediction_mask = np.logical_or(prediction_mask, prediction == class_id)
+
+            num_points = target_mask.sum()
+            metrics[f"#{class_name}PointsTarget"] = num_points
+
+            total_points = target.size
+            metrics[f"%{class_name}PointsTarget"] = 100 * num_points / total_points
+
+            num_points = prediction_mask.sum()
+            metrics[f"#{class_name}PointsPrediction"] = num_points
+
+            total_points = prediction.size
+            metrics[f"%{class_name}PointsPrediction"] = 100 * num_points / total_points
+
 
             tp = np.logical_and(target_mask, prediction_mask).sum()
             fp = np.logical_and(np.logical_not(target_mask), prediction_mask).sum()
@@ -95,12 +125,17 @@ def semantic_segmentation_metrics(  # pylint: disable=too-many-locals, too-many-
             metrics[f"{class_name}Recall"] = recall
             recalls_aggregated.append(recall)
 
+            f1_score = 2 * (precision * recall) / (precision + recall) if (precision * recall) > 0 else 0.0
+            metrics[f"{class_name}F1"] = f1_score
+            f1_scores_aggregated.append(f1_score)
+
             iou = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else 0.0
             metrics[f"{class_name}IoU"] = iou
             ious_aggregated.append(iou)
 
-    metrics["MeanPrecisionAggregated"] = np.array(precisions_aggregated).mean()
-    metrics["MeanRecallAggregated"] = np.array(recalls_aggregated).mean()
-    metrics["MeanIoUAggregated"] = np.array(ious_aggregated).mean()
+        metrics["MeanPrecisionAggregated"] = np.array(precisions_aggregated).mean()
+        metrics["MeanRecallAggregated"] = np.array(recalls_aggregated).mean()
+        metrics["MeanF1Aggregated"] = np.array(f1_scores_aggregated).mean()
+        metrics["MeanIoUAggregated"] = np.array(ious_aggregated).mean()
 
     return metrics

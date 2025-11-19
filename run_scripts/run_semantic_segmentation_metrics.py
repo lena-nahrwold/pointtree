@@ -68,9 +68,7 @@ for segmentation_tool in segmentation_tools:
 
     aggregate_classes = {
         "vegetation":  [65, 68, 71],
-        "wood":   [64],
-        "ground": [67],
-        "other": [66, 70, 69]
+        "other":   [64, 66, 67, 70, 69]
     }
 
     evaluation = semantic_segmentation_metrics(
@@ -95,6 +93,13 @@ for segmentation_tool in segmentation_tools:
     print(f"Evaluation results saved to {output_path}")
 
     print(f"Create confusion matrices for {segmentation_tool}.")
+
+    aggregate_classes = {
+        "vegetation":  [65, 68, 71],
+        #"wood"      :  [64],
+        #"ground"    :  [67],
+        "other":   [64, 66, 67, 70, 69]
+    }
 
     png_path = f"./output/{segmentation_tool}_confusion_matrix"
     create_confusion_matrix(
