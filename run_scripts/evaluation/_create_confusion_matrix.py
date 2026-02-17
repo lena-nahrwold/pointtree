@@ -35,47 +35,68 @@ def create_confusion_matrix(
     def save_confusion_matrix(cm, png_path):
         # Normalize matrix (row-wise)
         cm_normalized = cm.div(cm.sum(axis=1).replace(0, np.nan), axis=0)
-        matrix_to_plot = cm_normalized.values
+        matrix_to_plot = cm_normalized.values*100
 
-        fig, ax = plt.subplots(figsize=(10, 8))
-        im = ax.imshow(matrix_to_plot, interpolation="nearest")
+        print(cm_normalized)
+
+        fig, ax = plt.subplots(figsize=(10, 8)) #plt.subplots(figsize=(6, 4))
+        im = ax.imshow(matrix_to_plot, interpolation="nearest", vmin=0, vmax=100)
 
         ax.set_xlabel("Predicted label", fontsize=12)
         ax.set_ylabel("True label", fontsize=12)
-        ax.set_title(title, fontsize=14)
+        ax.set_title(title, fontsize=14, fontweight='bold')
 
-        ax.set_xticks(np.arange(len(class_labels)))
-        ax.set_yticks(np.arange(len(class_labels)))
-        ax.set_xticklabels(class_labels, rotation=45, ha="right")
-        ax.set_yticklabels(class_labels)
+        row_labels = cm.index.tolist()
+        col_labels = cm.columns.tolist()
+
+        ax.set_xticks(np.arange(len(col_labels)), labels=["green\nvegetation", "other"])
+        ax.set_yticks(np.arange(len(row_labels)), labels=["other", "green\nvegetation"])
+        ax.set_xticklabels(col_labels, rotation=45, ha="right")
+        ax.set_yticklabels(row_labels)
 
         # Draw values with adaptive text color
-        for i in range(len(class_labels)):
-            for j in range(len(class_labels)):
+        for i in range(len(row_labels)):
+            for j in range(len(col_labels)):
                 value = matrix_to_plot[i, j]
                 rgba = im.cmap(im.norm(value))
                 lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
                 text_color = "black" if lum > 0.5 else "white"
 
                 ax.text(
-                    j, i, f"{value:.2f}",
+                    j, i, f"{value:.2f}%",
                     ha="center", va="center",
                     color=text_color
                 )
 
         fig.colorbar(im, ax=ax)
         plt.tight_layout()
-        plt.savefig(png_path, dpi=300)
+        plt.savefig(png_path, dpi=300, bbox_inches="tight", pad_inches=0.02)
         plt.close()
     
-    ids = list(class_map.values())
-    cm = confusion_matrix(target, prediction, labels=ids)
-    class_labels = list(class_map.keys())
+    # All true classes (rows)
+    true_ids = list(class_map.values())
+    true_labels = list(class_map.keys())
 
-    # Convert to DataFrame for easier plotting
-    cm = pd.DataFrame(cm, index=class_labels, columns=class_labels)
+    # Only predicted classes (columns)
+    predicted_ids = np.unique(prediction)
+    id_to_name = {v: k for k, v in class_map.items()}
+    predicted_labels = [id_to_name[i] for i in predicted_ids]
 
-    save_confusion_matrix(cm, f"{png_path}.png")
+    # Build rectangular confusion matrix
+    cm = pd.crosstab(
+        pd.Series(target, name="True"),
+        pd.Series(prediction, name="Predicted"),
+        dropna=False
+    )
+
+    # Enforce full rows and reduced columns
+    cm = cm.reindex(index=true_ids, columns=predicted_ids, fill_value=0)
+
+    # Replace IDs with names
+    cm.index = true_labels
+    cm.columns = predicted_labels
+
+    #save_confusion_matrix(cm, f"{png_path}.png")
 
     if aggregate_classes:
         # Create a mapping id → aggregated_name or original_name
